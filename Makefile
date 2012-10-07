@@ -4,7 +4,7 @@ TEST_REPORTER = spec
 lib/simple-proxy.js: src/simple-proxy.ls
 	@livescript -c -o lib src
 
-test:
+test: lib/simple-proxy.js
 	@NODE_ENV=test \
 		node_modules/.bin/mocha \
 			--timeout $(TEST_TIMEOUT) \
