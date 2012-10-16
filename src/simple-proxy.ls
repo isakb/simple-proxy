@@ -51,22 +51,25 @@ class exports.Proxy extends events.EventEmitter
       @emit \proxyError, error, options
       @onProxyError error, options, res
 
-    proxyRequest.on \close, ->
+    proxyRequest.on \close, ~>
       @emit \proxyClose, null, options
-      @onProxyError 'close', options
+      @onProxyError 'close', options, res
 
     if req.headers['content-length']
-      requestData = ''
-
-      req.on \data, (chunk) ~>
-        requestData += chunk
-        proxyRequest.write chunk, \binary
-
-      req.on \end, ~>
-        @emit \requestEnd, requestData, options
-        proxyRequest.end requestData
-
+      @processRequestData proxyRequest, req, options
     else
+      proxyRequest.end!
+
+
+  processRequestData: !(proxyRequest, req, options) ~>
+    requestData = ''
+
+    req.on \data, (chunk) ~>
+      requestData += chunk
+      proxyRequest.write chunk, \binary
+
+    req.on \end, ~>
+      @emit \requestEnd, requestData, options
       proxyRequest.end!
 
 
