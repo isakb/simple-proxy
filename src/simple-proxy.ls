@@ -10,9 +10,9 @@ exports.proxyPass = (proxyURI, options={}) ->
 
 
 class exports.Proxy extends events.EventEmitter
-  (proxyURI, {timeout = 0, agent = false}) ->
-    @timeout = timeout
-    @agent   = agent
+  (proxyURI, options = {}) ->
+    @timeout = options.timeout  || 0
+    @agent   = options.agent    || false
 
     @{protocol, hostname, port, pathname} = url.parse(proxyURI)
 
@@ -82,18 +82,18 @@ class exports.Proxy extends events.EventEmitter
       responseData += chunk
       res.write chunk, \binary
 
-    proxyResponse.on \end, ->
+    proxyResponse.on \end, ~>
       @emit \proxyResponse, responseData, options
       res.end!
 
 
   onProxyTimeout: !(err, options, res) ->
-    console.error "Proxy timeout. #err"
+    #console.error "Proxy timeout. #err"
     res.writeHead 504, 'Gateway Timeout'
     res.end!
 
 
   onProxyError: !(err, options, res) ->
-    console.error err, options
+    #console.error err, options
     res.writeHead 502, 'Bad Gateway'
     res.end!

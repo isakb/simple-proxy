@@ -1,48 +1,39 @@
 fs                  = require 'fs'
 http                = require 'http'
 https               = require 'https'
-async               = require 'async'
 requestLib          = require 'request'
 assert              = require 'assert'
 simpleProxy         = require '../../lib/simple-proxy'
 
-HTTP_TARGET_PORT    = 5555
-HTTPS_TARGET_PORT   = 6443
+
 PROXY_PORT          = 7777
 PROXY_BASE_URL      = "http://localhost:#{PROXY_PORT}"
-DUMMY_RESPONSE_BODY       = JSON.stringify ok: 'yes'
+DUMMY_RESPONSE_BODY = JSON.stringify ok: 'yes'
 
-servers =
-  mockHttp: null
-  mockHttps: null
-  simpleProxy: null
+TARGET_PORT         =
+  http              : 5555
+  https             : 6443
 
 HTTPS_OPTIONS =
   key                 : fs.readFileSync("#{__dirname}/../myssl.key").toString()
   cert                : fs.readFileSync("#{__dirname}/../myssl.crt").toString()
 
 
-module.exports =
+module.exports = self =
 
-  startTestServers: (callback, options = {}) ->
-    {protocol} = options
-    throw new TypeError('Bad protocol')  unless /https?:/.test(protocol)
+  proxyPort: -> PROXY_PORT
 
-    async.series [
-      (next) -> startTestSimpleProxyServer(next, protocol),
-      if protocol == 'https:'
-        (next) -> startMockHttpsServer(next)
-      else
-        (next) -> startMockHttpServer(next)
-    ], callback
+  startTargetServer: (protocol) ->
+    throw new Error("Bad protocol #{protocol}")  unless /https?/.test(protocol)
 
+    port = TARGET_PORT[protocol]
 
-  stopTestServers: (callback) ->
-    for own name, server of servers
-      if server
-        server.close()
-        delete servers[name]
-    callback()
+    s = if protocol == 'https'
+      https.createServer HTTPS_OPTIONS, self.dummyResponse
+    else
+      http.createServer self.dummyResponse
+
+    s.listen(port)
 
 
   request: makeRequest = ({path, method, request}, callback) ->
@@ -75,46 +66,24 @@ module.exports =
         done()
 
 
+  dummyResponseBody: -> DUMMY_RESPONSE_BODY
 
-#
-# Internal
-#
+  dummyResponse: (req, res) ->
+    @data = ''
+    req.on 'data', (chunk) =>
+      @data += chunk
+    req.on 'end', =>
+      response = if @data
+        try
+          d = JSON.parse(@data)
+        catch e
+          d = @data
+        JSON.stringify(received: d)
+      else
+        DUMMY_RESPONSE_BODY
 
-startTestSimpleProxyServer = (next, protocol = 'http:', port = PROXY_PORT) ->
-  targetPort = if protocol == 'https:'
-    HTTPS_TARGET_PORT
-  else
-    HTTP_TARGET_PORT
-  servers.simpleProxy = http.createServer(
-    simpleProxy.proxyPass("#{protocol}//localhost:#{targetPort}"))
-  servers.simpleProxy.listen port
-  next()
+      res.writeHead 200,
+        'Content-Type': 'application/json'
+        'Content-Length': response.length
 
-
-startMockHttpServer = (next) ->
-  servers.mockHttp = http.createServer dummyResponse
-  servers.mockHttp.listen HTTP_TARGET_PORT
-  next()
-
-
-startMockHttpsServer = (next) ->
-  servers.mockHttps = https.createServer HTTPS_OPTIONS, dummyResponse
-  servers.mockHttps.listen HTTPS_TARGET_PORT
-  next()
-
-
-dummyResponse = (req, res) ->
-  @data = ''
-  req.on 'data', (chunk) =>
-    @data += chunk
-  req.on 'end', =>
-    response = if @data
-      JSON.stringify(received: JSON.parse(@data))
-    else
-      DUMMY_RESPONSE_BODY
-
-    res.writeHead 200,
-      'Content-Type': 'application/json'
-      'Content-Length': response.length
-
-    res.end response
+      res.end response
