@@ -5,7 +5,8 @@ events = require \events
 
 
 exports.proxyPass = (proxyURI, options={}) ->
-  new Proxy(proxyURI, options).server
+  p = new Proxy(proxyURI, options)
+  return p.server.bind(p)
 
 
 class exports.Proxy extends events.EventEmitter
@@ -28,7 +29,7 @@ class exports.Proxy extends events.EventEmitter
       throw new Error "Unsupported protocol: #{@protocol}"
 
 
-  server: (req, res, next) ~>
+  server: (req, res, next) ->
     options =
       host    : @hostname
       path    : @pathname + req.url
@@ -61,7 +62,7 @@ class exports.Proxy extends events.EventEmitter
       proxyRequest.end!
 
 
-  processRequestData: !(proxyRequest, req, options) ~>
+  processRequestData: !(proxyRequest, req, options) ->
     requestData = ''
 
     req.on \data, (chunk) ~>
@@ -92,7 +93,7 @@ class exports.Proxy extends events.EventEmitter
     res.end!
 
 
-  onProxyError: !(err, options, res) ~>
+  onProxyError: !(err, options, res) ->
     console.error err, options
     res.writeHead 502, 'Bad Gateway'
     res.end!
