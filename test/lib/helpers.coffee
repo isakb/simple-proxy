@@ -45,23 +45,28 @@ module.exports =
     callback()
 
 
-  assertRequestProxied: ({path, method, title, expect, request}) ->
+  request: makeRequest = ({path, method, request}, callback) ->
     path            or= '/foo/bar'
     method          or= 'POST'
-    title           or= "proxies #{method} request"
     request         or= {}
     request.url     or= "#{PROXY_BASE_URL}#{path}"
     request.headers or= {}
+
+    request.headers['Content-Type'] or= 'application/json'  if request.body
+
+    m = method.toLowerCase().replace('delete', 'del')
+    requestLib[m] request, callback #(err, res, body)
+
+
+  assertRequestProxied: ({path, method, title, expect, request}) ->
+    title           or= "proxies #{method} request"
     expect          or= {}
     expect.body     or= DUMMY_RESPONSE_BODY  unless method == 'HEAD'
     expect.headers  or= 'content-type': 'application/json'
     expect.code     or= 200
 
-    request.headers['Content-Type'] or= 'application/json'  if request.body
-
     it title, (done) ->
-      m = method.toLowerCase().replace('delete', 'del')
-      requestLib[m] request, (err, res, body) ->
+      makeRequest {path, method, request}, (err, res, body) ->
         assert.equal err, null
         for header, value of expect.headers
           assert.equal res.headers[header], value
