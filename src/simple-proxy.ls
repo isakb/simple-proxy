@@ -39,7 +39,7 @@ class exports.Proxy extends events.EventEmitter
       agent   : @agent
 
     proxyRequest = @requestLib.request options, (proxyResponse) ~>
-      @onProxyResponse proxyResponse, res
+      @onProxyResponse proxyResponse, res, options
 
     if @timeout
       proxyRequest.setTimeout @timeout, (error) ~>
@@ -74,7 +74,7 @@ class exports.Proxy extends events.EventEmitter
       proxyRequest.end!
 
 
-  onProxyResponse: !(proxyResponse, res) ->
+  onProxyResponse: !(proxyResponse, res, options) ->
     res.writeHead proxyResponse.statusCode, proxyResponse.headers
     responseData = ''
 
@@ -83,7 +83,7 @@ class exports.Proxy extends events.EventEmitter
       res.write chunk, \binary
 
     proxyResponse.on \end, ->
-      @emit \proxyResponse, responseBody: responseData
+      @emit \proxyResponse, responseData, options
       res.end!
 
 
