@@ -52,10 +52,6 @@ class exports.Proxy extends events.EventEmitter
       @emit \proxyError, error, options
       @onProxyError error, options, res
 
-    proxyRequest.on \close, ~>
-      @emit \proxyClose, null, options
-      @onProxyError 'close', options, res
-
     if req.headers['content-length']
       @processRequestData proxyRequest, req, options
     else
