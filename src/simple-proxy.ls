@@ -11,8 +11,9 @@ exports.proxyPass = (proxyURI, options={}) ->
 
 class exports.Proxy extends events.EventEmitter
   (proxyURI, options = {}) ->
-    @timeout = options.timeout  || 0
-    @agent   = options.agent    || false
+    @timeout      = options.timeout      || 0
+    @agent        = options.agent        || false
+    @preserveHost = options.preserveHost || false
 
     @{protocol, hostname, port, pathname} = url.parse(proxyURI)
 
@@ -37,6 +38,8 @@ class exports.Proxy extends events.EventEmitter
       method  : req.method
       headers : req.headers
       agent   : @agent
+
+    options.headers.host = @hostname  unless @preserveHost
 
     proxyRequest = @requestLib.request options, (proxyResponse) ~>
       @onProxyResponse proxyResponse, res, options
