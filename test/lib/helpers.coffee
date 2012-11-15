@@ -44,6 +44,7 @@ module.exports = self =
     request.headers or= {}
 
     request.headers['Content-Type'] or= 'application/json'  if request.body
+    request.headers['dummy-header'] = 'dummy-header'
 
     m = method.toLowerCase().replace('delete', 'del')
     requestLib[m] request, callback #(err, res, body)
@@ -85,5 +86,6 @@ module.exports = self =
       res.writeHead 200,
         'Content-Type': 'application/json'
         'Content-Length': response.length
+        'dummy-header': 'dummy-header'
 
       res.end response
