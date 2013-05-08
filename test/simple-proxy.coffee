@@ -33,7 +33,9 @@ describe 'simple-proxy', ->
 
         before ->
           targetURI = "#{protocol}://localhost:#{target.address().port}"
-          proxyServer = http.createServer(simpleProxy.proxyPass(targetURI))
+          proxyServer = http.createServer(simpleProxy.proxyPass(targetURI,
+            rejectUnauthorized: false
+          ))
           proxyServer.listen(helpers.proxyPort())
 
         after ->
@@ -66,12 +68,13 @@ describe 'simple-proxy', ->
 
         beforeEach ->
           targetURI = "#{protocol}://localhost:#{target.address().port}"
-          proxy = new simpleProxy.Proxy(targetURI)
+          proxy = new simpleProxy.Proxy(targetURI, rejectUnauthorized: false)
           proxyServer = http.createServer(proxy.server.bind(proxy))
           proxyServer.listen helpers.proxyPort()
 
         afterEach ->
           proxyServer.close()
+          proxy = null
 
 
         assertRequestProxied method: 'GET'
@@ -128,18 +131,49 @@ describe 'simple-proxy', ->
             request method: 'GET', ->
 
 
-      describe "targeting a server that doesn't exist", ->
-        before ->
-          targetURI = "#{protocol}://99.99.99.99:9999"
-          fun = simpleProxy.proxyPass(targetURI, {timeout: 10})
-          proxyServer = http.createServer(fun)
-          proxyServer.listen(helpers.proxyPort())
+    describe "targeting a #{protocol.toUpperCase()} server that is offline", ->
+      proxyServer = null
 
-        after ->
-          proxyServer.close()
+      before ->
+        target = helpers.startTargetServer(protocol)
+        targetURI = "#{protocol}://localhost:#{target.address().port}"
+        proxyServer = http.createServer(simpleProxy.proxyPass(targetURI,
+          rejectUnauthorized: false
+        ))
+        proxyServer.listen(helpers.proxyPort())
+        target.close()
 
-        assertRequestProxied
-        it 'responds with HTTP 504 - Gateway Timeout', (done) ->
-          request method: 'GET', (err, res, body) ->
-            assert.equal(res.statusCode, 504)
-            done()
+      after ->
+        proxyServer.close()
+
+      it 'responds with HTTP 502 - Bad Gateway', (done) ->
+        request method: 'GET', (err, res, body) ->
+          assert.equal(err, null)
+          assert.equal(res.statusCode, 502)
+          assert.equal(body, '')
+          done()
+
+
+    describe "targeting a too slow #{protocol.toUpperCase()} server", ->
+      target = null
+      proxyServer = null
+
+      before ->
+        target = helpers.startTargetServer(protocol, 60000)
+        targetURI = "#{protocol}://localhost:#{target.address().port}"
+        proxyServer = http.createServer(simpleProxy.proxyPass(targetURI,
+          rejectUnauthorized: false
+          timeout: 10
+        ))
+        proxyServer.listen(helpers.proxyPort())
+
+      after ->
+        proxyServer.close()
+        target.close()
+
+      it 'responds with HTTP 504 - Gateway Timeout', (done) ->
+        request method: 'GET', (err, res, body) ->
+          assert.equal(err, null)
+          assert.equal(res.statusCode, 504)
+          assert.equal(body, '')
+          done()

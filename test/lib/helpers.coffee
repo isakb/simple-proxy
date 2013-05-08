@@ -23,15 +23,15 @@ module.exports = self =
 
   proxyPort: -> PROXY_PORT
 
-  startTargetServer: (protocol) ->
+  startTargetServer: (protocol, responseTime) ->
     throw new Error("Bad protocol #{protocol}")  unless /https?/.test(protocol)
 
     port = TARGET_PORT[protocol]
 
     s = if protocol == 'https'
-      https.createServer HTTPS_OPTIONS, self.dummyResponse
+      https.createServer HTTPS_OPTIONS, self.makeDummyResponse(responseTime)
     else
-      http.createServer self.dummyResponse
+      http.createServer self.makeDummyResponse(responseTime)
 
     s.listen(port)
 
@@ -69,7 +69,7 @@ module.exports = self =
 
   dummyResponseBody: -> DUMMY_RESPONSE_BODY
 
-  dummyResponse: (req, res) ->
+  makeDummyResponse: (responseTime = 0) -> (req, res) ->
     @data = ''
     req.on 'data', (chunk) =>
       @data += chunk
@@ -83,9 +83,12 @@ module.exports = self =
       else
         DUMMY_RESPONSE_BODY
 
-      res.writeHead 200,
-        'Content-Type': 'application/json'
-        'Content-Length': response.length
-        'dummy-header': 'dummy-header'
+      respond = ->
+        res.writeHead 200,
+          'Content-Type': 'application/json'
+          'Content-Length': response.length
+          'dummy-header': 'dummy-header'
+        res.end response
 
-      res.end response
+      setTimeout respond, responseTime
+

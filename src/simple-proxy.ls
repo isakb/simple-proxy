@@ -11,9 +11,11 @@ exports.proxyPass = (proxyURI, options={}) ->
 
 class exports.Proxy extends events.EventEmitter
   (proxyURI, options = {}) ->
-    @timeout      = options.timeout      || 0
-    @agent        = options.agent        || false
-    @preserveHost = options.preserveHost || false
+    @logging            = options.logging                 ? false
+    @timeout            = options.timeout                 ? 0
+    @agent              = options.agent                   ? void
+    @preserveHost       = options.preserveHost            ? false
+    @rejectUnauthorized = options.rejectUnauthorized      ? true
 
     @{protocol, hostname, port, pathname} = url.parse(proxyURI)
 
@@ -32,12 +34,13 @@ class exports.Proxy extends events.EventEmitter
 
   server: (req, res, next) ->
     options =
-      host    : @hostname
-      path    : @pathname + req.url
-      port    : @port
-      method  : req.method
-      headers : req.headers
-      agent   : @agent
+      host               : @hostname
+      path               : @pathname + req.url
+      port               : @port
+      method             : req.method
+      headers            : req.headers
+      agent              : @agent
+      rejectUnauthorized : @rejectUnauthorized
 
     options.headers.host = @hostname  unless @preserveHost
 
@@ -46,6 +49,7 @@ class exports.Proxy extends events.EventEmitter
 
     if @timeout
       proxyRequest.setTimeout @timeout, (error) ~>
+        error = "Request timed out after #{@timeout} ms."
         @emit \proxyTimeout, error, options
         @onProxyTimeout error, options, res
         proxyRequest.abort!
@@ -82,17 +86,18 @@ class exports.Proxy extends events.EventEmitter
       res.write chunk, \binary
 
     proxyResponse.on \end, ~>
+      console.error "Proxy end: #responseData"  if @logging
       @emit \proxyResponse, responseData, options
       res.end!
 
 
-  onProxyTimeout: !(err, options, res) ->
-    #console.error "Proxy timeout. #err"
+  onProxyTimeout: !(err, options, res) ~>
+    console.error "Proxy timeout: #err"  if @logging
     res.writeHead 504, 'Gateway Timeout'
     res.end!
 
 
-  onProxyError: !(err, options, res) ->
-    #console.error err, options
+  onProxyError: !(err, options, res) ~>
+    console.error "Proxy error: #err, #{JSON.stringify(options)}"  if @logging
     res.writeHead 502, 'Bad Gateway'
     res.end!
