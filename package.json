@@ -1,6 +1,6 @@
 {
   "name": "ls-simple-proxy",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "A simple HTTP proxy server",
   "keywords": [
     "http",
