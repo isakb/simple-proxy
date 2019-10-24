@@ -1,6 +1,6 @@
 {
   "name": "ls-simple-proxy",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "A simple HTTP proxy server",
   "keywords": [
     "http",
@@ -17,13 +17,12 @@
     }
   ],
   "engines": {
-    "node": ">=0.8.9",
+    "node": ">=8",
     "npm": "1"
   },
   "main": "./lib/simple-proxy.js",
   "scripts": {
-    "pretest": "coffeelint -r .",
-    "test": "make test"
+    "test": "mocha --timeout 2000 --reporter spec test/*.js"
   },
   "repository": {
     "type": "git",
@@ -36,8 +35,7 @@
   "devDependencies": {
     "LiveScript": "~1.1.1",
     "mocha": "~1.9.0",
-    "coffee-script": "~1.6.2",
-    "coffeelint": "~0.5.4",
-    "request": "~2.21.0"
-  }
+    "request": "^2.88.0"
+  },
+  "dependencies": {}
 }
