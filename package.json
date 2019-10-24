@@ -22,7 +22,7 @@
   },
   "main": "./lib/simple-proxy.js",
   "scripts": {
-    "test": "mocha --timeout 2000 --reporter spec test/*.js"
+    "test": "mocha --timeout 2000 --reporter spec --exit test/*.js "
   },
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "LiveScript": "~1.1.1",
-    "mocha": "~1.9.0",
+    "mocha": "^6.2.2",
     "request": "^2.88.0"
   },
   "dependencies": {}
